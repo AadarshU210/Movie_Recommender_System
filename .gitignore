@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+env/
+venv/
+ENV/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.ipynb_checkpoints/
+
+# Environment
+.env
+*.env
+
+# Data / models / pickles
+*.pkl
+*.pickle
+*.h5
+*.joblib
+*.npz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Notebook checkpoints & outputs
+.ipynb_checkpoints/
+output/

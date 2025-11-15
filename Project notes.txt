@@ -1,0 +1,236 @@
+* A recommender system is an intelligent system that predicts what a user might like based on their preferences, behavior, or similarities with other users or items.
+
+## Types of Recommender Systems:
+
+1. Content-Based Filtering
+
+ - Recommend Items similar to what the user liked before
+ - Represent each item as a feature vector (like a profile)
+   Inception → [Sci-Fi=1, Action=1, Romance=0, Drama=0]
+   Titanic   → [Sci-Fi=0, Action=0, Romance=1, Drama=1]
+ - Compute similarity b/w items(e.g., cosine similarity)
+ - then recommend items most similar to user's liked ones.
+
+(it works mostly on what user has liked or watched previously but 
+ only disadvantage is that it can't recommend something different
+ from other genre)
+
+
+2. Collaborative Filtering
+
+  Idea is that people who are similar to you, like similar things.
+
+- Finds users similar to you and recommend what they liked.
+   or
+- Finds items that are rated similarly by the same users
+
+3. Hybrid Recommender System
+
+- Combine content based and collaborative approaches to get the best of both
+
+ - Use collaborative filtering to get base recommendations.
+ - Then refine results using content based similarity.
+ 
+
+
+## Project Flow
+
+
+Data ---> Preprocessing ---> model ---> website ---> deploy
+
+
+## Data Preprocessing
+
+Load both csv in notebook
+
+then merge both based on any columns
+
+-> movies.merge(credits, on='title')
+
+Now out of these total columns we are going to keep only few of them and important ones those are actually indicator of
+how to recommend similar content
+
+-> genre, keywords, cast, crew, title, overview  => these thing are needed to recommend any content to someone
+
+ now we need to reduce the dimensions even more and my final dataframe should contain genre, title, and keywords column where rest 
+others are integrated
+
+ before that let's preprocess
+ -> first find missing values
+   movies.isnull().sum() -> non - zero number means there are null values there in that column
+
+ -> next drop those values
+   movies.dropna(inplace = True)
+
+ -> next check for duplicated values
+   movies.duplicated().sum() --> if found movies.drop_duplicates(inplace = True) and movies.reset_index(drop = True, inplace = True)
+
+ 
+ -> after that let's correct the formats of different columns because we need selective info out of all columns like director from crew etc
+
+ -> ex: - '[{"id": 28, "name": "Action"}, {"id": 12, "name": "Adventure"}, {"id": 14, "name": "Fantasy"}, {"id": 878, "name": "Science Fiction"}]' from this to this -> ['Action','Adventure','Fantasy','Science Fiction']
+
+   write a helper function and use ast.literal_eval() and convert string to list then loop over and extract name key and return a new list
+  later this function can be used so that values from certain column can be passed on and converted
+
+  movies['genres'].apply(convert)
+
+  similarily we will have to apply for other columns such as crew, keywords etc
+
+  after converting all related columns into list
+
+  we will then apply a transformation over these all columns - we will have to remove space from between the values. why ?
+   |
+   --> Problem is When you train a model on text (e.g., for a movie recommender using actor names, descriptions, etc.), the text usually goes through tokenization — the process of splitting text into smaller units called tokens.
+     ex: Sam Wilson and Sam cook , so instead of giving recommendations based Sam Wilson it might give you recommendation on Sam Cook
+    So after Removing Space between them -> SamWilson and SamCook 
+
+    doing all this for all other columns as well
+    we will concatenate everything into a new column called 'tags' and drop other columns
+
+    convert tags into a string
+
+##Vectorization
+
+Once data preprocessing is done, now it's time for convert these tags into vectors. But why?
+
+See machine understands only numbers not text, image, video or anything and they understand specifically vector of numbers 
+ex: - [0.14, 0.87, 0.34] and every ML model expects numeric vectors as an input
+
+ML algorithms work by performing dot products, matrix multiplications, distance calculations etc and all these operations require vectors.
+and to check whether two entities(in this case movies) are similar or not algorithms calculate cosine similarity between them which again
+require these entities to be encoded into vectors.
+
+this is called text vectorization
+
+A litte overview of text vectorization:- 
+  
+  there are 3 major generations of text vectorization:
+  
+  Classic(Count-based)
+  Static word embeddings
+  Contextual embeddings(state-of-the-art)
+  
+  Each step solves the problems of the previous ones
+
+  # Count Based Techniques
+
+    * Bag of Words :- 
+         - Converts text into a vector of word counts
+         - Vocabulary = all unique words in dataset.
+         - Each document becomes a giant sparse vector.
+      ex:-
+         "I like movies" → [1,1,1,0,0,0]
+         "He likes sports" → [0,0,0,1,1,1]
+ 
+      pros is that its simple fast and good for basic recommender but cons is that it ignores order of sentence, it ignores meaning
+      and very sparse
+    
+    * TF-IDF(Term frequency - Inverse document frequency)
+         - Builds on BoW but adds importance weighting.
+              - Common words get low weight.
+              - Rare, meaningful words get high weight.
+         This techniques mostly used in recommender systems, search engines, document similarity.
+  
+     pros is it give meaningful weights and very effective for similarity tasks but cons is that it still ignores context and semantics
+
+  # Static word embeddings(Neural-based)
+
+     These create dense vectors(like 300 dimensions), where similar words have similar vectors.
+     
+     famous models: 
+        - Word2Vec
+        - GloVe
+        - FastText
+     
+     Each word gets one fixed vector
+ 
+    pros is that it captures meaning, dense vector and has similarity properties but cons is that same word has same vector in all contexts ( bank of river and money bank here bank has different meaning with different context) and cannot handle out of vocabulary words(except FastText)
+
+  # Contextual Embeddings(Transformer era)
+  
+    These models generate embeddings based on context.
+
+    Models:
+     - BERT
+     - RoBERTa
+     - DistilBERT
+     - GPT 
+     - Sentence-BERT(best for similarity)
+  
+    ex: "bank" in "river bank" -> vector A
+        "bank" in "bank account" -> vector B
+
+     Pros is best semantic understanding, context-aware, handles ambiguity, great for search, recommendation, clustering but cons is it's slower, requires GPU for large models and harder to train
+
+Currently for this recommender system we are using BoW at first, later on we will use TF-IDF
+
+also we need to remove some words which are irrelevant to our case such as - 'a', 'an', 'of', 'are' ,'the' etc
+
+now
+
+from sklearn.feature_extraction.text import CountVectorizer
+cv = CountVectorizer(max_features = 5000, stop_words = 'english')
+
+vectors = cv.fit_transform(new_df['tags']).toarray()
+
+but now we have some of the words which are again repeating in nature
+
+like action, actions or activity, activities etc
+
+so to remove those we will install another library called nltk
+
+using which we will perform stemming ( reducing a word to its base form )
+
+  ex:- loved -> love
+       connection -> connect 
+       idea behind this is that different forms of a word often mean the same thing. So we convert them into a single common base.
+    PorterStemmer  is an algorithm which applies a set of rules to chop off suffixes: ing, ed, s, tion etc
+
+we will create a helper function 
+ 
+
+def stem(text):
+   y = []
+   for i in text.split():
+       y.append(ps.stem(i))
+
+after this finally it's time to find the distance (cosine) between the vectors 
+if distance is close that means they are similar
+
+from sklearn.metrics.pairwise import cosine_similarity
+
+similarity = cosine_similarity(vectors)
+
+each movie's similarity is compared to 4806 movies and we get some numbers
+
+so 1st movie's similarity score with 1st movie is ought to be 1
+
+
+Now we will make a main function which will be Movie recommender
+
+def recommend(movie):
+    movie_index = new_df[new_df['title'] == movie].index[0]
+    distances = similarity[movie_index]
+    movies_list = sorted(list(enumerate(distances)), reverse = True, key=lambda x:x[1])[1:6]
+
+    for i in movies_list:
+        print(new_df.iloc[i[0]].title)
+    
+
+here we have this movie index which we will pass to similarity and we will have list of vectors there which represent that movie's similarity compared to other movies, Now all we need is to sort those distances and we can return the result
+
+
+Also we have to preserve the actual indexing of list so we can convert it into enumerate then in list and then we can sort them
+
+
+
+  
+  
+   
+
+  
+
+
+
+ 
