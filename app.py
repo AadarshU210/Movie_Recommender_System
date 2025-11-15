@@ -3,7 +3,7 @@ import pickle
 import pandas as pd
 import requests
 
-API_Token = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjOTZhOGZiZTk1YzYwMDJmNzk3MmI0MjU4OWUwY2U4ZSIsIm5iZiI6MTc2MzEzNDAzOS4xNzIsInN1YiI6IjY5MTc0YTU3NmNiM2U1Yjg1NzRjOWIxOSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.cWwIXuxC26eekBwNcD80v2ZMcp_7SjchQkv6-RVYNJc"
+API_Token = "<Your-tmdb-Api-token>"
 
 def fetch_poster(movie_id):
     url = f"https://api.themoviedb.org/3/movie/{movie_id}/images"
